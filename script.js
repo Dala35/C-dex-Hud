@@ -1,68 +1,46 @@
-let modulesState = {
-  dala: 80, nzuri: 70, luminarius: 60,
-  emilia: 75, zalaya: 90, sayu: 65, axekode: 85
-};
-
-const hud = document.querySelector('.hud');
-
-function renderModules(){
-  hud.innerHTML = '';
-  for(const key in modulesState){
-    hud.innerHTML += `
-      <div class="module" id="mod-${key}" onclick="togglePortal('${key}')">
-        <h3>${key.toUpperCase()}</h3>
-        <div class="status">Status: Ativo</div>
-        <div class="freq-bar"><div class="freq-fill" id="freq-${key}" style="width:${modulesState[key]}%"></div></div>
-        <canvas id="energy-${key}" width="100" height="50"></canvas>
-        <div class="description">Descrição do módulo ${key}</div>
-      </div>
-    `;
-  }
-}
-renderModules();
-
-function togglePortal(key){
-  const desc = document.getElementById('mod-'+key).querySelector('.description');
-  desc.style.display = desc.style.display==='block'?'none':'block';
-}
-
-async function updateModules(){
-  const res = await fetch('/modules');
-  const data = await res.json();
-  modulesState = data;
-  for(const key in data){
-    document.getElementById('freq-'+key).style.width = data[key]+'%';
-  }
-}
-setInterval(updateModules,1000);
-
-// Chat
 async function sendPrompt(){
   const input = document.getElementById('prompt');
   const prompt = input.value;
   if(!prompt) return;
-  const res = await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+
+  const res = await fetch('/chat',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({prompt})
+  });
+
   const data = await res.json();
+
   displayMessage(prompt,true);
   displayMessage(data.response,false);
   speakMessage(data.response);
+
+  // Atualizar HUD com ajustes
+  for(const key in data.adjustments){
+    const newVal = modulesState[key] + data.adjustments[key];
+    modulesState[key] = Math.min(100, Math.max(0, newVal));
+    document.getElementById('freq-'+key).style.width = modulesState[key]+'%';
+  }
+
   input.value='';
 }
 
-function displayMessage(text,isUser){
-  const container = document.getElementById('responses');
-  const msg = document.createElement('div');
-  msg.classList.add('message');
-  msg.style.background = isUser ? '#45a29e':'#1f2833';
-  msg.textContent = text;
-  container.appendChild(msg);
-  container.scrollTop = container.scrollHeight;
+// Canvas de energia vibracional
+function drawCanvas(key){
+  const canvas = document.getElementById('energy-'+key);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const height = modulesState[key] / 100 * canvas.height;
+  ctx.fillStyle = '#66fcf1';
+  ctx.fillRect(0,canvas.height-height,canvas.width,height);
 }
 
-function speakMessage(text){
-  if('speechSynthesis' in window){
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang='pt-BR';
-    window.speechSynthesis.speak(utter);
+// Atualização contínua
+function renderCanvas(){
+  for(const key in modulesState){
+    drawCanvas(key);
   }
+  requestAnimationFrame(renderCanvas);
 }
+renderCanvas();
