@@ -15,32 +15,36 @@ async function sendPrompt(){
   displayMessage(data.response,false);
   speakMessage(data.response);
 
-  // Atualizar HUD com ajustes
+  // Atualiza HUD
   for(const key in data.adjustments){
-    const newVal = modulesState[key] + data.adjustments[key];
-    modulesState[key] = Math.min(100, Math.max(0, newVal));
+    modulesState[key] = Math.min(100, Math.max(0, modulesState[key]+data.adjustments[key]));
     document.getElementById('freq-'+key).style.width = modulesState[key]+'%';
   }
 
   input.value='';
 }
 
-// Canvas de energia vibracional
-function drawCanvas(key){
-  const canvas = document.getElementById('energy-'+key);
-  if(!canvas) return;
+// Função de fluxo de energia entre módulos
+function drawFlow(){
+  const canvas = document.getElementById('logCanvas');
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  const height = modulesState[key] / 100 * canvas.height;
-  ctx.fillStyle = '#66fcf1';
-  ctx.fillRect(0,canvas.height-height,canvas.width,height);
+
+  const keys = Object.keys(modulesState);
+  for(let i=0;i<keys.length-1;i++){
+    const x1 = (i+0.5)*(canvas.width/keys.length);
+    const y1 = canvas.height - modulesState[keys[i]]/100*canvas.height;
+    const x2 = (i+1+0.5)*(canvas.width/keys.length);
+    const y2 = canvas.height - modulesState[keys[i+1]]/100*canvas.height;
+
+    ctx.strokeStyle = '#66fcf1';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+  }
+  requestAnimationFrame(drawFlow);
 }
 
-// Atualização contínua
-function renderCanvas(){
-  for(const key in modulesState){
-    drawCanvas(key);
-  }
-  requestAnimationFrame(renderCanvas);
-}
-renderCanvas();
+drawFlow();
