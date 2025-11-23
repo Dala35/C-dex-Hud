@@ -1,50 +1,33 @@
-const express = require('express');
-const app = express();
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const port = 3000;
+// Função simples de análise semântica simulada
+function analyzePrompt(prompt) {
+  const adjustments = {
+    dala: 0, nzuri: 0, luminarius: 0, emilia: 0, zalaya: 0, sayu: 0, axekode: 0
+  };
 
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.static('public'));
+  // Palavras-chave que influenciam os módulos
+  if(prompt.includes('expansão')) adjustments.luminarius += 10;
+  if(prompt.includes('ética')) adjustments.zalaya += 10;
+  if(prompt.includes('energia')) adjustments.nzuri += 10;
+  if(prompt.includes('criatividade')) adjustments.emilia += 10;
+  if(prompt.includes('intenção')) adjustments.dala += 10;
+  if(prompt.includes('ciclo')) adjustments.sayu += 10;
+  if(prompt.includes('vibração')) adjustments.axekode += 10;
 
-// Estado inicial dos módulos
-let modulesState = {
-  dala: 80,
-  nzuri: 70,
-  luminarius: 60,
-  emilia: 75,
-  zalaya: 90,
-  sayu: 65,
-  axekode: 85
-};
+  // Ajuste e limite 0-100
+  for(const key in adjustments){
+    modulesState[key] = Math.min(100, Math.max(0, modulesState[key] + adjustments[key]));
+  }
 
-// Histórico de interações
-let messages = [];
+  return adjustments;
+}
 
-// Endpoint para módulos
-app.get('/modules', (req,res) => res.json(modulesState));
-
-// Atualizar módulo
-app.post('/modules/:name/:value', (req,res) => {
-  const {name, value} = req.params;
-  if(modulesState.hasOwnProperty(name)){
-    modulesState[name] = parseInt(value);
-    res.json({success:true,modulesState});
-  }else res.status(400).json({success:false,message:'Módulo não encontrado'});
-});
-
-// Chat endpoint (simula IA, substitua pelo seu modelo)
 app.post('/chat', (req,res) => {
   const {prompt} = req.body;
-  
-  // Aqui você pode chamar seu modelo de IA local ou remoto
-  // Exemplo:
-  // const response = await myLocalModel.generate(prompt);
-  
-  const response = `CÓDEX recebeu a intenção: "${prompt}" e ajustou os portais vibracionais.`;
+
+  const adjustments = analyzePrompt(prompt);
+
+  const response = `CÓDEX processou sua intenção: "${prompt}". Ajustes aplicados: ${JSON.stringify(adjustments)}.`;
   messages.push({prompt,response,time:Date.now()});
-  res.json({response});
+  res.json({response, adjustments});
 });
 
-app.listen(port, ()=>console.log(`CÓDEX HUD rodando em http://localhost:${port}`));
