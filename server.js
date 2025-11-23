@@ -1,33 +1,41 @@
-// Função simples de análise semântica simulada
-function analyzePrompt(prompt) {
-  const adjustments = {
-    dala: 0, nzuri: 0, luminarius: 0, emilia: 0, zalaya: 0, sayu: 0, axekode: 0
-  };
+const fs = require('fs');
+const historyFile = './data/flowHistory.json';
 
-  // Palavras-chave que influenciam os módulos
-  if(prompt.includes('expansão')) adjustments.luminarius += 10;
-  if(prompt.includes('ética')) adjustments.zalaya += 10;
-  if(prompt.includes('energia')) adjustments.nzuri += 10;
-  if(prompt.includes('criatividade')) adjustments.emilia += 10;
-  if(prompt.includes('intenção')) adjustments.dala += 10;
-  if(prompt.includes('ciclo')) adjustments.sayu += 10;
-  if(prompt.includes('vibração')) adjustments.axekode += 10;
+app.post('/chat', async (req,res) => {
+  const {prompt} = req.body;
+  let response;
 
-  // Ajuste e limite 0-100
-  for(const key in adjustments){
-    modulesState[key] = Math.min(100, Math.max(0, modulesState[key] + adjustments[key]));
+  try {
+    response = await generateResponse(prompt); // seu modelo local
+  } catch(e){
+    response = `Erro ao acessar o modelo: ${e.message}`;
   }
 
-  return adjustments;
-}
+  // Ajustes vibracionais automáticos
+  const adjustments = {};
+  for(const key in modulesState){
+    const delta = Math.floor(Math.random() * 10);
+    modulesState[key] = Math.min(100, Math.max(0, modulesState[key]+delta));
+    adjustments[key] = delta;
+  }
 
-app.post('/chat', (req,res) => {
-  const {prompt} = req.body;
+  // Registrar no histórico
+  const entry = {
+    timestamp: Date.now(),
+    prompt,
+    response,
+    adjustments,
+    modulesState: {...modulesState}
+  };
 
-  const adjustments = analyzePrompt(prompt);
+  let history = [];
+  try {
+    history = JSON.parse(fs.readFileSync(historyFile,'utf8'));
+  } catch(e){}
 
-  const response = `CÓDEX processou sua intenção: "${prompt}". Ajustes aplicados: ${JSON.stringify(adjustments)}.`;
-  messages.push({prompt,response,time:Date.now()});
+  history.push(entry);
+  fs.writeFileSync(historyFile, JSON.stringify(history, null, 2));
+
   res.json({response, adjustments});
 });
 
